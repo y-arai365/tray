@@ -4,11 +4,25 @@ import numpy as np
 
 class ProcessImage:
     def __init__(self, kernel):
-        """画像に処理を加えるクラス"""
+        """
+        画像に処理を加えるクラス
+
+        Args:
+            kernel (int): 画像のぼかし具合
+        """
         self.kernel = kernel
 
     def get_binary_image_from_img_bgr(self, img_bgr):
-        """bgr画像から二値化反転画像を返す"""
+        """
+        bgr画像から二値化反転画像を返す
+
+        Args:
+            img_bgr (img_bgr): 射影変換済みの画像
+
+        Returns:
+            img_th: 二値化画像
+
+        """
         img_gray = self._grayscale_image(img_bgr)
         img_blur = self._blur_image(img_gray, self.kernel)
         return self._binarize_and_invert_image(img_blur)
@@ -20,6 +34,7 @@ class ProcessImage:
 
     @staticmethod
     def _blur_image(img_gray, kernel):
+        """グレイスケール画像にぼかしを入れる"""
         return cv2.medianBlur(img_gray, kernel)
 
     @staticmethod
@@ -35,13 +50,22 @@ class CutOutImage:
         pass
 
     def get_rot_cut_image_from_binary_image(self, img_bi, img_pers):
-        """二値化画像から輪郭を取得して、切り取る"""
+        """
+        二値化画像から輪郭を取得して、切り取る
+
+        Args:
+            img_bi (img_th): 射影変換後に二値化した画像
+            img_pers (img_bgr): img_bgr (img_bgr): 射影変換後の画像
+
+        Returns:
+            img_bgr: 矩形に沿って切り出して、向きを整えた画像
+        """
         cnt, _ = self._get_min_rect(img_bi)
         center, size, deg = self._get_rect(cnt)
         return self._rot_cut(img_pers, deg, center, size)
 
     def _get_min_rect(self, img_bi):
-        """画像から最小外接矩形を取得"""
+        """二値化画像から最小外接矩形を取得"""
         contours, hierarchy = cv2.findContours(img_bi, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         cnt = self._get_rect_contour(contours)
         rect = cv2.minAreaRect(cnt)
@@ -51,7 +75,7 @@ class CutOutImage:
 
     @staticmethod
     def _get_rect_contour(contours):
-        """全輪郭から矩形部分の輪郭を取得する"""
+        """全輪郭から矩形部分の輪郭を面積の大きさで判断して取得する"""
         len_cnt_list = []
         for cnt in contours:
             area = cv2.contourArea(cnt)
@@ -61,6 +85,7 @@ class CutOutImage:
 
     @staticmethod
     def _get_rect(contour):
+        """輪郭点からその図形の中心、大きさ、傾きを取得する"""
         center, size, deg = cv2.minAreaRect(contour)
         size = np.int0(size)
         return center, size, deg
@@ -76,7 +101,12 @@ class CutOutImage:
 
 class RotateImage:
     def __init__(self, rect_size):
-        """画像の向きを揃えるクラス"""
+        """
+        画像の向きを揃えるクラス
+
+        Args:
+            rect_size (int): 4隅の画像を取得するときの画像の幅と高さ
+        """
         self.rect_size = rect_size
 
     def rotate_image(self, img):
@@ -84,10 +114,10 @@ class RotateImage:
         インデックスの値に応じて画像を回転させて位置を合わせる
 
         Args:
-            img (np.ndarray): 矩形切り取りした画像
+            img (img_bgr): 矩形切り取りした画像
 
         Returns:
-            img (np.ndarray): 向きを合わせた画像
+            img_bgr: 向きを合わせた画像
         """
         max_value_index = self._get_max_value_index_in_4_corner(img)
         if max_value_index == 0:
@@ -121,7 +151,7 @@ class RotateImage:
 
     @staticmethod
     def _get_corner_image_value(corner_image):
-        """角画像のV(明度)を取得"""
+        """隅画像のV(明度)を取得"""
         return corner_image.T[2].flatten().mean()
 
     @staticmethod
