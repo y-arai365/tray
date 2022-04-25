@@ -1,6 +1,3 @@
-"""
-img[ul_h:lr_h, ul_w:lr_w]
-"""
 import cv2
 import numpy as np
 
@@ -40,15 +37,16 @@ class Judgement:
         """画像をポケットサイズで分けるクラス"""
         pass
 
-    def mark_blank_pocket(self, img, coordinate_list, w_interval, h_interval):
+    def mark_blank_pocket(self, img, coordinate_list, w_interval, h_interval, th):
         """空のポケットを矩形表示して指摘"""
         img_copy = img.copy()
         for coordinate in coordinate_list:
             pocket_image = self._get_pocket_image(img_copy, coordinate, w_interval, h_interval)
-            binary_pocket_image = self._process_img_bgr_to_img_th(pocket_image)
+            binary_pocket_image = self._process_img_bgr_to_img_th(pocket_image, th)
             result = self._judge(binary_pocket_image)
             if result == 0:
                 img_copy = self._mark(img_copy, coordinate, w_interval, h_interval)
+                # self._mark2(img_copy, coordinate, w_interval, h_interval)
         return img_copy
 
     @staticmethod
@@ -58,11 +56,11 @@ class Judgement:
         return img[y:y+h_interval, x:x+w_interval]
 
     @staticmethod
-    def _process_img_bgr_to_img_th(img):
+    def _process_img_bgr_to_img_th(img, th):
         """BGR画像を二値化画像に変更する"""
         img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         img_blur = cv2.medianBlur(img_gray, 5)
-        _, binary_pocket_image = cv2.threshold(img_blur, 200, 255, cv2.THRESH_BINARY)
+        _, binary_pocket_image = cv2.threshold(img_blur, th, 255, cv2.THRESH_BINARY)
         return binary_pocket_image
 
     @staticmethod
@@ -76,6 +74,13 @@ class Judgement:
         x, y = round(coordinate[0]), round(coordinate[1])
         return cv2.rectangle(img, (x+2, y+2), (x+w_interval-2, y+h_interval-2), (0, 0, 255), 2)
 
+    @staticmethod
+    def _mark2(img, coordinate, w_interval, h_interval):
+        x, y = round(coordinate[0]), round(coordinate[1])
+        img_a = img[y+2:y+h_interval-2, x+2:x+w_interval-2]
+        img_a[:, :, (0, 1)] = 0
+        # img_a[:, :, 2] += 40
+
 
 if __name__ == '__main__':
     _ul = (130, 140)
@@ -88,9 +93,9 @@ if __name__ == '__main__':
     _w_interval, _h_interval = mat.get_interval(_ul, _lr, _pocket_num)
     _coordinate_list = mat.get_upper_left_coordinates(_ul, _lr, _pocket_num)
 
-    _result_image = jud.mark_blank_pocket(_img, _coordinate_list, _w_interval, _h_interval)
+    _result_image = jud.mark_blank_pocket(_img, _coordinate_list, _w_interval, _h_interval, 200)
     cv2.namedWindow("img_rect", cv2.WINDOW_NORMAL)
-    cv2.resizeWindow("img_rect", 1000, 1000)
+    cv2.resizeWindow("img_rect", 900, 900)
     cv2.imshow("img_rect", _result_image)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
